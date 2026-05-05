@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "淘宝购物车导出助手",
+  "description": "识别淘宝购物车当前页面中的商品信息，并导出为 Excel 可打开的 .xls 表格。",
+  "version": "1.0.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "导出淘宝购物车"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://cart.taobao.com/*",
+    "*://cart.tmall.com/*",
+    "*://*.taobao.com/*",
+    "*://*.tmall.com/*",
+    "*://*.alicdn.com/*",
+    "*://*.tbcdn.cn/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://cart.taobao.com/*",
+        "*://cart.tmall.com/*",
+        "*://*.taobao.com/cart*",
+        "*://*.tmall.com/cart*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>淘宝购物车导出助手</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup">
+      <header class="header">
+        <h1>淘宝购物车导出</h1>
+        <p id="status" class="status">先扫描购物车，确认内容后再导出。</p>
+      </header>
+
+      <section class="toolbar">
+        <button id="scanButton" type="button">扫描预览</button>
+        <button id="exportButton" type="button" disabled>导出选中</button>
+      </section>
+
+      <section class="selectionBar" aria-label="选择工具">
+        <label class="checkAll">
+          <input id="checkAllBox" type="checkbox" checked disabled>
+          <span id="selectionSummary">未扫描</span>
+        </label>
+        <button id="invertButton" class="ghostButton" type="button" disabled>反选</button>
+      </section>
+
+      <section id="previewList" class="previewList" aria-label="导出预览"></section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
