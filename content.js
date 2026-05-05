@@ -84,6 +84,9 @@
 
     for (let index = 0; index < 16; index += 1) {
       mergeItems(itemsByKey, extractCartItems());
+      if (itemsByKey.size > 0 && isRecommendBoundaryVisible()) {
+        break;
+      }
 
       const nextTop = Math.min(
         document.documentElement.scrollHeight,
@@ -94,7 +97,7 @@
 
       const nextHeight = document.documentElement.scrollHeight;
       const reachedBottom = window.scrollY + window.innerHeight >= nextHeight - 8;
-      if (reachedBottom && nextHeight === lastHeight) {
+      if ((itemsByKey.size > 0 && isRecommendBoundaryVisible()) || (reachedBottom && nextHeight === lastHeight)) {
         break;
       }
       lastHeight = nextHeight;
@@ -104,6 +107,26 @@
     window.scrollTo({ top: originalY, left: originalX, behavior: "auto" });
     await delay(250);
     return [...itemsByKey.values()];
+  }
+
+  function isRecommendBoundaryVisible() {
+    const boundaryPatterns = /^(猜你喜欢|为你推荐|相似好物|掌柜热卖)$/;
+    const candidates = [
+      ...document.querySelectorAll("h1, h2, h3, h4, [class*='title'], [class*='Title']")
+    ];
+
+    return candidates.some((element) => {
+      const text = cleanText(element.innerText || element.textContent);
+      if (!boundaryPatterns.test(text)) {
+        return false;
+      }
+
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 &&
+        rect.height > 0 &&
+        rect.top >= -20 &&
+        rect.top <= window.innerHeight + 180;
+    });
   }
 
   function mergeItems(itemsByKey, items) {
@@ -656,11 +679,13 @@
   }
 
   function downloadXls(items) {
-    const headers = ["店铺", "商品名称", "规格", "单价", "数量", "小计", "商品链接", "图片", "是否选中", "抓取时间"];
+    const headers = ["店铺", "商品名称", "规格", "型号", "床垫尺寸", "单价", "数量", "小计", "商品链接", "图片", "是否选中", "抓取时间"];
     const rows = items.map((item) => [
       item.shop,
       item.title,
       item.sku,
+      extractModel(item),
+      extractMattressSize(item),
       item.unitPrice,
       item.quantity,
       item.subtotal,
@@ -691,12 +716,68 @@
     URL.revokeObjectURL(url);
   }
 
+  function extractModel(item) {
+    return extractModelFromSku(item.sku) || extractModelFromSku(item.title);
+  }
+
+  function extractModelFromSku(value) {
+    const text = cleanText(value).replace(/[()（）【】[\]{}]/g, " ");
+    if (!text) {
+      return "";
+    }
+
+    const parts = text
+      .split(/[\/｜|；;,，\s]+/)
+      .map(cleanText)
+      .filter(Boolean);
+
+    for (let index = parts.length - 1; index >= 0; index -= 1) {
+      const model = normalizeModel(parts[index]);
+      if (model) {
+        return model;
+      }
+    }
+
+    const explicitModel = text.match(/(?:型号|款号|编号)[:：\s]*([A-Za-z]{1,4}\d[A-Za-z0-9]{0,12})/i);
+    return normalizeModel(explicitModel?.[1] || "");
+  }
+
+  function normalizeModel(value) {
+    const text = cleanText(value).toUpperCase();
+    if (!text || /MM|CM|M\*/i.test(text)) {
+      return "";
+    }
+
+    const matches = [...text.matchAll(/\b([A-Z]{1,4}\d[A-Z0-9]{0,12})\b/g)];
+    if (!matches.length) {
+      return "";
+    }
+
+    const model = matches[matches.length - 1][1];
+    if (/^\d+$/.test(model) || /^(RMB|SKU)$/i.test(model)) {
+      return "";
+    }
+    return model;
+  }
+
+  function extractMattressSize(item) {
+    const text = cleanText(`${item.sku || ""} ${item.title || ""}`)
+      .replace(/[×xX]/g, "*")
+      .replace(/\s+/g, "");
+    const match = text.match(/(\d{3,4})(?:mm|毫米)?\*(\d{3,4})(?:mm|毫米)?/i);
+    if (!match) {
+      return "";
+    }
+
+    return `${match[1]}mm*${match[2]}mm`;
+  }
+
   function renderExcelRow(row) {
     return `<tr style="height:86px;">${row.map((cell, index) => renderExcelCell(cell, index)).join("")}</tr>`;
   }
 
   function renderExcelCell(cell, index) {
-    if (index === 7) {
+    if (index === 9) {
       return `<td style="width:92px;text-align:center;vertical-align:middle;">${renderImageCell(cell)}</td>`;
     }
     return `<td style="vertical-align:middle;">${escapeHtml(cell)}</td>`;
